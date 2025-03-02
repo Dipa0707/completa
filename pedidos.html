@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Pedidos - DanielFish</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <style>
+        .orders-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            background: #f8f9fa;
+        }
+
+        .order-card {
+            background: linear-gradient(to right bottom, #ffffff, #f8f9fa);
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .order-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.15);
+        }
+
+        .order-header {
+            background: linear-gradient(to right, #f8f9fa, #ffffff);
+            margin: -1.5rem -1.5rem 1.2rem -1.5rem;
+            padding: 1.5rem;
+            border-radius: 12px 12px 0 0;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .order-id {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e3d59;
+        }
+
+        .order-date {
+            color: #757575;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        .order-date i {
+            margin-right: 0.5rem;
+            color: #2196F3;
+        }
+
+        .order-items {
+            background: rgba(255,255,255,0.7);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .order-item {
+            background: white;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .order-total {
+            text-align: right;
+            font-weight: bold;
+            margin-top: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .order-status {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: #FFF3E0;
+            color: #E65100;
+        }
+
+        .status-processing {
+            background: #E3F2FD;
+            color: #1565C0;
+        }
+
+        .status-shipped {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .status-delivered {
+            background: #E0F2F1;
+            color: #00695C;
+        }
+
+        .status-cancelled {
+            background: #FFEBEE;
+            color: #B71C1C;
+        }
+
+        .order-actions {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #EEEEEE;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .order-actions button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+
+        .update-status {
+            background: linear-gradient(135deg, #1e3d59, #2c5282);
+            color: white;
+            padding: 10px 25px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+
+        .update-status:hover {
+            background: linear-gradient(135deg, #2c5282, #1e3d59);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .delete-order {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            padding: 10px 25px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+
+        .delete-order:hover {
+            background: linear-gradient(135deg, #c82333, #dc3545);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+        }
+
+        .shipping-details {
+            background: linear-gradient(to right bottom, #f1f3f5, #f8f9fa);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            line-height: 1.8;
+            border: 1px solid #e9ecef;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .shipping-details strong {
+            color: #1e3d59;
+        }
+
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .filters select {
+            padding: 0.7rem 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+
+        .filters select:hover {
+            border-color: #2196F3;
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+        }
+
+        .status-dropdown {
+            background: white;
+            color: #1e3d59;
+            padding: 10px 25px;
+            border: 2px solid #1e3d59;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+
+        .status-dropdown:hover {
+            border-color: #2c5282;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.2);
+        }
+
+        .status-dropdown option.divider {
+            border-bottom: 1px solid #ccc;
+            height: 1px;
+            color: #999;
+            background-color: #f5f5f5;
+            padding: 0;
+            margin: 4px 0;
+        }
+
+        .status-dropdown option {
+            padding: 8px 12px;
+            background-color: white;
+        }
+
+        .basic-info {
+            margin: 1rem 0;
+            padding: 1rem 0;
+            border-bottom: 1px solid #EEEEEE;
+            line-height: 1.8;
+            color: #424242;
+        }
+
+        .basic-info strong {
+            color: #1e3d59;
+        }
+
+        .details-button {
+            background: linear-gradient(135deg, #1e3d59, #2c5282);
+            color: white;
+            padding: 10px 25px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+
+        .details-button:hover {
+            background: linear-gradient(135deg, #2c5282, #1e3d59);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .admin-hero {
+            background: linear-gradient(135deg, #1e3d59, #2196F3);
+            color: white;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav-button {
+            background: linear-gradient(135deg, #1e3d59, #2c5282);
+            color: white !important;
+            padding: 10px 25px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: inline-block;
+        }
+
+        .nav-button:hover {
+            background: linear-gradient(135deg, #2c5282, #1e3d59);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        nav a:hover {
+            background-color: #f0f2f5;
+        }
+        
+        nav a.active {
+            background-color: #f0f2f5;
+            color: #2c5282;
+        }
+
+        main {
+            flex: 1;
+            padding: 20px;
+            margin-left: 250px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ef 100%);
+            min-height: 100vh;
+        }
+
+        .admin-container {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .orders-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            color: rgb(0, 0, 0);
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+        }
+    </style>
+</head>
+<body>
+    <div style="display: flex;">
+        <!-- Navbar Vertical -->
+        <nav style="
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            width: 250px;
+            min-height: 100vh;
+            padding: 20px 0;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1;
+        ">
+            <div style="
+                display: flex;
+                flex-direction: column;
+                padding: 0 20px;
+            ">
+                <a href="index.html" style="
+                    text-decoration: none;
+                    color: #1e3d59;
+                    font-weight: 500;
+                    padding: 12px 20px;
+                    margin: 5px 0;
+                    border-radius: 6px;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                ">
+                    <i class="fas fa-home"></i>
+                    Inicio
+                </a>
+                <a href="admin.html" style="
+                    text-decoration: none;
+                    color: #1e3d59;
+                    font-weight: 500;
+                    padding: 12px 20px;
+                    margin: 5px 0;
+                    border-radius: 6px;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                ">
+                    <i class="fas fa-plus"></i>
+                    Produtos
+                </a>
+                <a href="pedidos.html" style="
+                    text-decoration: none;
+                    color: #1e3d59;
+                    font-weight: 500;
+                    padding: 12px 20px;
+                    margin: 5px 0;
+                    border-radius: 6px;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                ">
+                    <i class="fas fa-shopping-cart"></i>
+                    Ver Pedidos
+                </a>
+            </div>
+        </nav>
+
+        <!-- Conteúdo -->
+        <div style="flex: 1; padding: 20px; margin-left: 250px; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ef 100%); min-height: 100vh;">
+            <h1 style="
+                color: #1e3d59;
+                font-size: 2rem;
+                margin-bottom: 2rem;
+                font-weight: 600;
+            ">
+                <i class="fas fa-shopping-bag"></i> Gestão de Pedidos
+            </h1>
+
+            <div class="orders-container">
+                <div class="filters">
+                    <select id="statusFilter" onchange="filterOrders()">
+                        <option value="all">Todos os Status</option>
+                        <option value="pending">Pendente</option>
+                        <option value="processing">Em Processamento</option>
+                        <option value="shipped">Enviado</option>
+                        <option value="delivered">Entregue</option>
+                        <option value="cancelled">Cancelado</option>
+                    </select>
+                    <select id="dateFilter" onchange="filterOrders()">
+                        <option value="all">Todas as Datas</option>
+                        <option value="today">Hoje</option>
+                        <option value="week">Esta Semana</option>
+                        <option value="month">Este Mês</option>
+                    </select>
+                </div>
+
+                <div id="ordersList">
+                    <!-- Pedidos serão carregados aqui -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDdPF1KwTeC5zzFbsLnkCvx6a2BmWt8iL8",
+            authDomain: "test-58408.firebaseapp.com",
+            projectId: "test-58408",
+            storageBucket: "test-58408.appspot.com",
+            messagingSenderId: "857029748739",
+            appId: "1:857029748739:web:5a85299a0343e54a118636",
+            measurementId: "G-M4YV7HB77W"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        // Verificar se usuário é admin
+        firebase.auth().onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (!userDoc.exists || !userDoc.data().isAdmin) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                loadOrders();
+            } catch (error) {
+                console.error('Erro ao verificar permissões:', error);
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Carregar pedidos
+        async function loadOrders() {
+            const ordersList = document.getElementById('ordersList');
+            const statusFilter = document.getElementById('statusFilter').value;
+            const dateFilter = document.getElementById('dateFilter').value;
+
+            try {
+                // Query base
+                let query = db.collection('orders');
+
+                // Aplicar ordenação por data
+                query = query.orderBy('createdAt', 'desc');
+
+                // Buscar todos os documentos
+                const snapshot = await query.get();
+                let orders = [];
+
+                // Filtrar no lado do cliente se necessário
+                snapshot.forEach(doc => {
+                    const order = doc.data();
+                    order.id = doc.id;
+
+                    // Filtrar por status
+                    if (statusFilter !== 'all' && order.status !== statusFilter) {
+                        return;
+                    }
+
+                    // Filtrar por data
+                    if (dateFilter !== 'all') {
+                        const orderDate = order.createdAt.toDate();
+                        const now = new Date();
+                        let startDate = new Date();
+
+                        switch(dateFilter) {
+                            case 'today':
+                                startDate.setHours(0, 0, 0, 0);
+                                if (orderDate < startDate) return;
+                                break;
+                            case 'week':
+                                startDate.setDate(now.getDate() - 7);
+                                if (orderDate < startDate) return;
+                                break;
+                            case 'month':
+                                startDate.setMonth(now.getMonth() - 1);
+                                if (orderDate < startDate) return;
+                                break;
+                        }
+                    }
+
+                    orders.push(order);
+                });
+
+                // Gerar HTML
+                if (orders.length === 0) {
+                    ordersList.innerHTML = '<p>Nenhum pedido encontrado.</p>';
+                    return;
+                }
+
+                let html = orders.map(order => `
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span class="order-id">Pedido #${order.id}</span>
+                            <span class="order-status status-${order.status}">${getStatusText(order.status)}</span>
+                        </div>
+                        <div class="order-date">
+                            <i class="far fa-clock"></i> ${order.createdAt.toDate().toLocaleString()}
+                        </div>
+                        <div class="basic-info">
+                            <strong>Cliente:</strong> ${order.shipping.name}<br>
+                            <strong>Total:</strong> ${order.total.toFixed(2)}€
+                        </div>
+                        <div class="shipping-details" id="details-${order.id}" style="display: none;">
+                            <strong>Email:</strong> ${order.userEmail}<br>
+                            <strong>Endereço:</strong> ${order.shipping.address}, ${order.shipping.city}<br>
+                            <strong>Método de Pagamento:</strong> ${getPaymentMethod(order.paymentMethod)}
+                            <div class="order-items">
+                                ${order.items.map(item => `
+                                    <div class="order-item">
+                                        <span>${item.name} x ${item.quantity}</span>
+                                        <span>${item.subtotal.toFixed(2)}€</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="order-actions">
+                            <button class="details-button" onclick="toggleDetails('${order.id}')">
+                                Ver Detalhes
+                            </button>
+                            <select class="status-dropdown" onchange="updateOrderStatus('${order.id}', this.value)" value="${order.status}">
+                                <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pendente</option>
+                                <option value="processing" ${order.status === 'processing' ? 'selected' : ''}>Em Processamento</option>
+                                <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>Enviado</option>
+                                <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Entregue</option>
+                                <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelado</option>
+                            </select>
+                            <button class="delete-order" onclick="deleteOrder('${order.id}')">
+                                Eliminar Pedido
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                ordersList.innerHTML = html;
+            } catch (error) {
+                console.error('Erro ao carregar pedidos:', error);
+                ordersList.innerHTML = '<p>Erro ao carregar pedidos: ' + error.message + '</p>';
+            }
+        }
+
+        // Função para atualizar status do pedido
+        async function updateOrderStatus(orderId, newStatus) {
+            try {
+                await db.collection('orders').doc(orderId).update({
+                    status: newStatus
+                });
+                loadOrders();
+            } catch (error) {
+                console.error('Erro ao atualizar status:', error);
+                alert('Erro ao atualizar status do pedido');
+            }
+        }
+
+        // Função para eleminar pedido
+        async function deleteOrder(orderId) {
+            if (confirm('Tem certeza que deseja eliminar este pedido?')) {
+                try {
+                    await db.collection('orders').doc(orderId).delete();
+                    loadOrders();
+                } catch (error) {
+                    console.error('Erro ao eliminar pedido:', error);
+                    alert('Erro ao eliminar pedido');
+                }
+            }
+        }
+
+        // Função para filtrar pedidos
+        function filterOrders() {
+            loadOrders();
+        }
+
+        // Funções auxiliares
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': 'Pendente',
+                'processing': 'Em Processamento',
+                'shipped': 'Enviado',
+                'delivered': 'Entregue',
+                'cancelled': 'Cancelado'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getPaymentMethod(method) {
+            const methodMap = {
+                'card': 'Cartão de Crédito',
+                'mbway': 'MB WAY',
+                'multibanco': 'Multibanco'
+            };
+            return methodMap[method] || method;
+        }
+
+        // Adicionar a função toggleDetails após as outras funções
+        function toggleDetails(orderId) {
+            const detailsDiv = document.getElementById(`details-${orderId}`);
+            const button = event.target;
+            if (detailsDiv.style.display === 'none') {
+                detailsDiv.style.display = 'block';
+                button.textContent = 'Ocultar Detalhes';
+            } else {
+                detailsDiv.style.display = 'none';
+                button.textContent = 'Ver Detalhes';
+            }
+        }
+    </script>
+</body>
+</html> 

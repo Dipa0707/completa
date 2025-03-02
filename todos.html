@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todos os Produtos - DanielFish</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="icon" href="logo.png" type="image/x-icon">
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <!-- Include Navigation -->
+    <iframe src="nav.html" frameborder="0" width="100%" onload="this.before((this.contentDocument.body||this.contentDocument).children[0]);this.remove()" style="display: block;"></iframe>
+
+    <main>
+        <!-- Cabeçalho da página -->
+        <div class="page-header">
+            <h1>Todos os Produtos</h1>
+            <div class="filters">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Procurar produtos..." 
+                    onkeyup="filterProducts()"
+                >
+                <select id="categoryFilter" onchange="filterProducts()">
+                    <option value="todos">Todas as Categorias</option>
+                    <option value="canas">Canas</option>
+                    <option value="carretos">Carretos</option>
+                    <option value="roupa">Roupa</option>
+                    <option value="outros">Outros</option>
+                </select>
+                <select id="priceFilter" onchange="filterProducts()">
+                    <option value="todos">Todos os Preços</option>
+                    <option value="0-50">€0 - €50</option>
+                    <option value="51-100">€51 - €100</option>
+                    <option value="101-200">€101 - €200</option>
+                    <option value="201+">€201+</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Grid de produtos -->
+        <div class="products-container">
+            <div id="allProducts" class="product-grid">
+                <!-- Produtos serão carregados dinamicamente aqui -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Loja DanielFish. Feito por Daniel Fernandes</p>
+    </footer>
+
+    <!-- Modal de Login/Registro -->
+    <div id="authModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeAuthModal()">&times;</span>
+            <div id="loginForm">
+                <h2>Entrar</h2>
+                <form onsubmit="login(event)">
+                    <input type="email" id="loginEmail" placeholder="Email *" required>
+                    <input type="password" id="loginPassword" placeholder="Senha *" required>
+                    <button type="submit">Entrar</button>
+                    <button type="button" onclick="toggleForms()">Criar Conta</button>
+                </form>
+            </div>
+            <div id="signupForm" style="display:none;">
+                <h2>Criar Conta</h2>
+                <form onsubmit="signup(event)">
+                    <input type="text" id="signupName" placeholder="Nome completo *" required>
+                    <input type="email" id="signupEmail" placeholder="Email *" required>
+                    <input type="password" id="signupPassword" placeholder="Senha *" required>
+                    <input type="password" id="confirmPassword" placeholder="Confirmar senha *" required>
+                    <button type="submit">Registrar</button>
+                    <button type="button" onclick="toggleForms()">Já tem uma conta? Entrar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        let allProductsData = [];
+
+        // Carregar todos os produtos
+        async function loadAllProducts() {
+            const productsDiv = document.getElementById('allProducts');
+            productsDiv.innerHTML = '<p>Carregando produtos...</p>';
+
+            try {
+                const snapshot = await db.collection('products').get();
+                allProductsData = [];
+                let productsHTML = '';
+
+                snapshot.forEach(doc => {
+                    const product = doc.data();
+                    allProductsData.push({
+                        id: doc.id,
+                        ...product
+                    });
+
+                    productsHTML += `
+                        <div class="product-card">
+                            <a href="mostrar.html?id=${doc.id}" class="product-link">
+                                <img src="${product.imageUrl}" alt="${product.name}">
+                                <h3>${product.name}</h3>
+                                <p class="description">${product.description}</p>
+                                <p class="price">€${product.price}</p>
+                            </a>
+                            <button onclick="addToCart('${doc.id}')" class="cart-button">
+                                <i class="fas fa-shopping-cart"></i>
+                                Adicionar ao Carrinho
+                            </button>
+                        </div>
+                    `;
+                });
+
+                productsDiv.innerHTML = productsHTML || '<p>Nenhum produto encontrado.</p>';
+            } catch (error) {
+                console.error("Erro ao carregar produtos:", error);
+                productsDiv.innerHTML = '<p>Erro ao carregar produtos. Por favor, tente novamente.</p>';
+            }
+        }
+
+        // Função para filtrar produtos
+        function filterProducts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            const priceFilter = document.getElementById('priceFilter').value;
+            
+            let filteredProducts = allProductsData;
+
+            // Filtrar por termo de busca
+            if (searchTerm) {
+                filteredProducts = filteredProducts.filter(product => 
+                    product.name.toLowerCase().includes(searchTerm) ||
+                    product.description.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            // Filtrar por categoria
+            if (categoryFilter !== 'todos') {
+                filteredProducts = filteredProducts.filter(product => 
+                    product.category === categoryFilter
+                );
+            }
+
+            // Filtrar por preço
+            if (priceFilter !== 'todos') {
+                const [min, max] = priceFilter.split('-').map(Number);
+                filteredProducts = filteredProducts.filter(product => {
+                    const price = Number(product.price);
+                    if (max) {
+                        return price >= min && price <= max;
+                    } else {
+                        return price >= min;
+                    }
+                });
+            }
+
+            // Atualizar a exibição
+            const productsDiv = document.getElementById('allProducts');
+            let productsHTML = '';
+
+            filteredProducts.forEach(product => {
+                productsHTML += `
+                    <div class="product-card">
+                        <a href="mostrar.html?id=${product.id}" class="product-link">
+                            <img src="${product.imageUrl}" alt="${product.name}">
+                            <h3>${product.name}</h3>
+                            <p class="description">${product.description}</p>
+                            <p class="price">€${product.price}</p>
+                        </a>
+                        <button onclick="addToCart('${product.id}')" class="cart-button">
+                            <i class="fas fa-shopping-cart"></i>
+                            Adicionar ao Carrinho
+                        </button>
+                    </div>
+                `;
+            });
+
+            productsDiv.innerHTML = productsHTML || '<p>Nenhum produto encontrado com estes filtros.</p>';
+        }
+
+        // Carregar produtos quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAllProducts();
+        });
+    </script>
+</body>
+</html> 

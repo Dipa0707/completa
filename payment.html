@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento - DanielFish</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+</head>
+<body>
+    <iframe src="nav.html" frameborder="0" width="100%" onload="this.before((this.contentDocument.body||this.contentDocument).children[0]);this.remove()"></iframe>
+
+    <main class="checkout-container">
+        <!-- Progresso do checkout -->
+        <div class="checkout-progress">
+            <div class="progress-step">
+                <span class="step-number">1</span>
+                <span class="step-text">CARRINHO</span>
+            </div>
+            <div class="progress-step">
+                <span class="step-number">2</span>
+                <span class="step-text">LOGIN</span>
+            </div>
+            <div class="progress-step">
+                <span class="step-number">3</span>
+                <span class="step-text">ENVIO</span>
+            </div>
+            <div class="progress-step active">
+                <span class="step-number">4</span>
+                <span class="step-text">PAGAMENTO</span>
+            </div>
+        </div>
+
+        <div class="payment-content">
+            <div class="payment-methods">
+                <h2>Método de Pagamento</h2>
+                <div class="payment-options">
+                    <div class="payment-option">
+                        <input type="radio" id="mbway" name="payment" value="mbway">
+                        <label for="mbway">
+                            <img src="mbway-logo.png" alt="MB WAY">
+                            MB WAY
+                        </label>
+                    </div>
+                    <div class="payment-option">
+                        <input type="radio" id="multibanco" name="payment" value="multibanco">
+                        <label for="multibanco">
+                            <img src="multibanco-logo.png" alt="Multibanco">
+                            Multibanco
+                        </label>
+                    </div>
+                    <div class="payment-option">
+                        <input type="radio" id="card" name="payment" value="card">
+                        <label for="card">
+                            <img src="card-logo.png" alt="Cartão">
+                            Cartão de Crédito/Débito
+                        </label>
+                    </div>
+                </div>
+
+                <div id="payment-details" class="payment-details">
+                    <!-- Detalhes do método de pagamento serão mostrados aqui -->
+                </div>
+
+                <button onclick="processPayment()" class="complete-order-button">
+                    Finalizar Pedido
+                </button>
+            </div>
+
+            <div class="order-summary">
+                <h2>Resumo do Pedido</h2>
+                <div id="order-items">
+                    <!-- Items serão carregados aqui -->
+                </div>
+                <div class="summary-totals">
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <span id="subtotal">0,00€</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Envio</span>
+                        <span id="shipping-cost">Grátis</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total</span>
+                        <span id="total">0,00€</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDdPF1KwTeC5zzFbsLnkCvx6a2BmWt8iL8",
+            authDomain: "test-58408.firebaseapp.com",
+            projectId: "test-58408",
+            storageBucket: "test-58408.appspot.com",
+            messagingSenderId: "857029748739",
+            appId: "1:857029748739:web:5a85299a0343e54a118636",
+            measurementId: "G-M4YV7HB77W"
+        };
+
+        // Inicializar Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        // Verificar autenticação
+        firebase.auth().onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+            }
+        });
+
+        // Mostrar detalhes do método de pagamento
+        document.addEventListener('DOMContentLoaded', () => {
+            const paymentMethods = document.querySelectorAll('input[name="payment"]');
+            const paymentDetails = document.getElementById('payment-details');
+
+            paymentMethods.forEach(method => {
+                method.addEventListener('change', () => {
+                    switch(method.value) {
+                        case 'card':
+                            paymentDetails.innerHTML = `
+                                <div class="card-details">
+                                    <div class="form-group">
+                                        <label for="cardNumber">Número do Cartão</label>
+                                        <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="expiry">Data de Validade</label>
+                                        <input type="text" id="expiry" placeholder="MM/AA" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cvv">CVV</label>
+                                        <input type="text" id="cvv" required>
+                                    </div>
+                                </div>
+                            `;
+                            break;
+                        case 'mbway':
+                            paymentDetails.innerHTML = `
+                                <div class="mbway-details">
+                                    <div class="form-group">
+                                        <label for="phone">Número de Telemóvel</label>
+                                        <input type="tel" id="phone" placeholder="9xx xxx xxx" required>
+                                    </div>
+                                </div>
+                            `;
+                            break;
+                        case 'multibanco':
+                            paymentDetails.innerHTML = `
+                                <p>Será gerada uma referência Multibanco após confirmar o pedido.</p>
+                            `;
+                            break;
+                    }
+                });
+            });
+        });
+
+        // Função para processar o pagamento
+        async function processPayment() {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    throw new Error('Usuário não está logado');
+                }
+
+                const paymentMethod = document.querySelector('input[name="payment"]:checked');
+                if (!paymentMethod) {
+                    alert('Por favor, selecione um método de pagamento');
+                    return;
+                }
+
+                const cart = JSON.parse(localStorage.getItem('cart'));
+                if (!cart || cart.length === 0) {
+                    throw new Error('Carrinho está vazio');
+                }
+
+                const shippingData = JSON.parse(localStorage.getItem('shippingData'));
+                if (!shippingData) {
+                    throw new Error('Dados de envio não encontrados');
+                }
+
+                // Calcular total e preparar itens
+                let total = 0;
+                const items = [];
+                
+                for (const item of cart) {
+                    const productDoc = await db.collection('products').doc(item.id).get();
+                    if (!productDoc.exists) {
+                        throw new Error(`Produto ${item.id} não encontrado`);
+                    }
+                    const product = productDoc.data();
+                    const itemTotal = product.price * item.quantity;
+                    total += itemTotal;
+                    
+                    items.push({
+                        productId: item.id,
+                        name: product.name,
+                        price: product.price,
+                        quantity: item.quantity,
+                        subtotal: itemTotal
+                    });
+                }
+
+                // Criar pedido
+                const orderData = {
+                    userId: user.uid,
+                    userEmail: user.email,
+                    items: items,
+                    shipping: shippingData,
+                    paymentMethod: paymentMethod.value,
+                    total: total,
+                    status: 'pending',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                const orderRef = await db.collection('orders').add(orderData);
+
+                // Limpar dados locais
+                localStorage.removeItem('cart');
+                localStorage.removeItem('shippingData');
+
+                // Redirecionar para confirmação
+                window.location.href = `order-confirmation.html?id=${orderRef.id}`;
+
+            } catch (error) {
+                console.error('Erro detalhado:', error);
+                alert('Erro ao processar o pagamento: ' + error.message);
+            }
+        }
+
+        // Carregar resumo do pedido
+        async function loadOrderSummary() {
+            try {
+                const cart = JSON.parse(localStorage.getItem('cart')) || [];
+                const orderItems = document.getElementById('order-items');
+                let total = 0;
+
+                for (const item of cart) {
+                    const doc = await db.collection('products').doc(item.id).get();
+                    if (doc.exists) {
+                        const product = doc.data();
+                        const itemTotal = product.price * item.quantity;
+                        total += itemTotal;
+
+                        orderItems.innerHTML += `
+                            <div class="order-item">
+                                <span>${product.name} x ${item.quantity}</span>
+                                <span>${itemTotal.toFixed(2)}€</span>
+                            </div>
+                        `;
+                    }
+                }
+
+                document.getElementById('subtotal').textContent = `${total.toFixed(2)}€`;
+                document.getElementById('total').textContent = `${total.toFixed(2)}€`;
+            } catch (error) {
+                console.error('Erro ao carregar resumo:', error);
+                alert('Erro ao carregar resumo do pedido');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadOrderSummary);
+    </script>
+</body>
+</html> 

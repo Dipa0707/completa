@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes do Produto - DanielFish</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="icon" href="logo.png" type="image/x-icon">
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <iframe src="nav.html" frameborder="0" width="100%" onload="this.before((this.contentDocument.body||this.contentDocument).children[0]);this.remove()" style="display: block;"></iframe>
+
+    <main>
+        <div class="product-detail-container">
+            <a href="javascript:history.back()" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+                Voltar
+            </a>
+            
+            <div class="product-detail">
+                <div class="product-images">
+                    <div class="main-image">
+                        <img id="productImage" src="" alt="Produto">
+                    </div>
+                </div>
+                
+                <div class="product-info">
+                    <h1 id="productName"></h1>
+                    <div class="product-rating">
+                        <span class="stars">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star-half-alt"></i>
+                        </span>
+                        <span id="productRating">4.7/5</span>
+                    </div>
+                    
+                    <div class="product-price">
+                        <span id="productPrice" class="price"></span>
+                    </div>
+
+                    <div class="product-reference">
+                        <p>Ref.: <span id="productRef"></span></p>
+                    </div>
+
+                    <div class="product-description">
+                        <p id="productDescription"></p>
+                    </div>
+
+                    <div class="product-actions">
+                        <button class="add-to-cart-btn" onclick="addToCart(currentProductId)">
+                            <i class="fas fa-shopping-cart"></i>
+                            Adicionar ao Carrinho
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Loja DanielFish. Feito por Daniel Fernandes</p>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        let currentProductId = '';
+
+        // Função para obter parâmetros da URL
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // Carregar detalhes do produto
+        async function loadProductDetails() {
+            const productId = getUrlParameter('id');
+            if (!productId) {
+                window.location.href = 'todos.html';
+                return;
+            }
+
+            currentProductId = productId;
+
+            try {
+                const doc = await db.collection('products').doc(productId).get();
+                if (doc.exists) {
+                    const product = doc.data();
+                    
+                    // Atualizar elementos da página
+                    document.getElementById('productName').textContent = product.name;
+                    document.getElementById('productImage').src = product.imageUrl;
+                    document.getElementById('productPrice').textContent = `€${product.price}`;
+                    document.getElementById('productDescription').textContent = product.description;
+                    document.getElementById('productRef').textContent = productId;
+                    
+                    // Atualizar título da página
+                    document.title = `${product.name} - DanielFish`;
+                } else {
+                    window.location.href = 'todos.html';
+                }
+            } catch (error) {
+                console.error("Erro ao carregar produto:", error);
+                alert('Erro ao carregar detalhes do produto');
+            }
+        }
+
+        // Carregar produto quando a página carregar
+        document.addEventListener('DOMContentLoaded', loadProductDetails);
+    </script>
+</body>
+</html> 

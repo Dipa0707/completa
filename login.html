@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - DanielFish</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script>
+</head>
+<body>
+    <iframe src="nav.html" frameborder="0" width="100%" onload="this.before((this.contentDocument.body||this.contentDocument).children[0]);this.remove()"></iframe>
+
+    <main class="checkout-container">
+        <!-- Progresso do checkout -->
+        <div class="checkout-progress">
+            <div class="progress-step">
+                <span class="step-number">1</span>
+                <span class="step-text">CARRINHO</span>
+            </div>
+            <div class="progress-step active">
+                <span class="step-number">2</span>
+                <span class="step-text">LOGIN</span>
+            </div>
+            <div class="progress-step">
+                <span class="step-number">3</span>
+                <span class="step-text">ENVIO</span>
+            </div>
+            <div class="progress-step">
+                <span class="step-number">4</span>
+                <span class="step-text">PAGAMENTO</span>
+            </div>
+        </div>
+
+        <div class="login-container">
+            <div class="login-form">
+                <h2>Iniciar Sessão</h2>
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Senha</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <button type="submit" class="login-button">Entrar</button>
+                </form>
+                <p class="or-divider">ou</p>
+                <button onclick="showRegisterForm()" class="register-button">
+                    Criar nova conta
+                </button>
+            </div>
+
+            <div class="register-form" style="display: none;">
+                <h2>Criar Conta</h2>
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    <div class="form-group">
+                        <label for="regName">Nome</label>
+                        <input type="text" id="regName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regEmail">Email</label>
+                        <input type="email" id="regEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPassword">Senha</label>
+                        <input type="password" id="regPassword" required>
+                    </div>
+                    <button type="submit" class="register-button">Criar Conta</button>
+                </form>
+                <p class="or-divider">ou</p>
+                <button onclick="showLoginForm()" class="login-button">
+                    Já tenho uma conta
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function showRegisterForm() {
+            document.querySelector('.login-form').style.display = 'none';
+            document.querySelector('.register-form').style.display = 'block';
+        }
+
+        function showLoginForm() {
+            document.querySelector('.register-form').style.display = 'none';
+            document.querySelector('.login-form').style.display = 'block';
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                await firebase.auth().signInWithEmailAndPassword(email, password);
+                window.location.href = 'shipping.html';
+            } catch (error) {
+                alert('Erro ao fazer login: ' + error.message);
+            }
+        }
+
+        async function handleRegister(event) {
+            event.preventDefault();
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+
+            try {
+                const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+                await firebase.firestore().collection('users').doc(userCredential.user.uid).set({
+                    name: name,
+                    email: email
+                });
+                window.location.href = 'shipping.html';
+            } catch (error) {
+                alert('Erro ao criar conta: ' + error.message);
+            }
+        }
+
+        // Verificar se o usuário já está logado
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                window.location.href = 'shipping.html';
+            }
+        });
+    </script>
+</body>
+</html> 

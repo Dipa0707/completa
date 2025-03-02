@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script>
+</head>
+<body>
+    <!---Conteudo da Navegation Bar-->
+    <header>
+            <div class="nav-container">
+                <div class="logo">
+                    <a href="index.html">
+                        <img src="logo.png" alt="Logo da Empresa" class="logo-image">
+                    </a>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="canas.html">Canas</a></li>
+                    <li><a href="carretos.html">Carretos</a></li>
+                    <li><a href="roupa.html">Roupa</a></li>
+                    <li><a href="outros.html">Outros</a></li>
+                    <li><a href="contacte-nos.html">Contate-nos</a></li>
+                </ul>
+                <div class="nav-icons">
+                    <script>
+                        // Configuração do Firebase
+                        const firebaseConfig = {
+                            apiKey: "AIzaSyDdPF1KwTeC5zzFbsLnkCvx6a2BmWt8iL8",
+                            authDomain: "test-58408.firebaseapp.com",
+                            projectId: "test-58408",
+                            storageBucket: "test-58408.appspot.com",
+                            messagingSenderId: "857029748739",
+                            appId: "1:857029748739:web:5a85299a0343e54a118636",
+                            measurementId: "G-M4YV7HB77W"
+                        };
+
+                        // Inicializar Firebase
+                        if (!firebase.apps.length) {
+                            firebase.initializeApp(firebaseConfig);
+                        }
+
+                        // Verificar se está na página inicial
+                        const isIndex = window.parent.location.pathname.endsWith('index.html') || 
+                                      window.parent.location.pathname === '/' || 
+                                      window.parent.location.pathname === '';
+
+                        if (isIndex) {
+                            document.write(`
+                                <a href="#" class="icon" id="authButton" onclick="window.parent.handleAuth()">
+                                    <i class="fas fa-user"></i> 
+                                    <span id="authText">Iniciar Sessão</span>
+                                </a>
+                            `);
+                        }
+                    </script>
+                    <a href="cart.html" class="icon">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span class="cart-count">0</span>
+                    </a>
+                    <a href="admin.html" class="icon" id="adminLink" style="display: none;">
+                        <i class="fas fa-cog"></i>
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <script>
+        // Função para atualizar contagem do carrinho
+        function updateCartCount() {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
+            const cartCount = document.querySelector('.cart-count');
+            if (cartCount) {
+                cartCount.textContent = totalItems;
+            }
+        }
+
+        // Atualizar contagem quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            updateCartCount();
+        });
+
+        // Verificar permissões de admin
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (user) {
+                firebase.firestore().collection('users').doc(user.uid)
+                    .get()
+                    .then((doc) => {
+                        if (doc.exists && doc.data().isAdmin === true) {
+                            // Atualizar o link de admin em todos os contextos
+                            const adminLinks = document.querySelectorAll('#adminLink');
+                            adminLinks.forEach(link => {
+                                if (link) {
+                                    link.style.display = 'inline-block';
+                                }
+                            });
+                            localStorage.setItem('isAdmin', 'true');
+                        }
+                    });
+
+                // Atualizar texto do botão de login
+                const authText = document.getElementById('authText');
+                if (authText) {
+                    authText.textContent = 'Sair';
+                }
+            } else {
+                // Esconder link de admin quando não houver usuário
+                const adminLinks = document.querySelectorAll('#adminLink');
+                adminLinks.forEach(link => {
+                    if (link) {
+                        link.style.display = 'none';
+                    }
+                });
+                localStorage.removeItem('isAdmin');
+
+                // Atualizar texto do botão de login
+                const authText = document.getElementById('authText');
+                if (authText) {
+                    authText.textContent = 'Iniciar Sessão';
+                }
+            }
+        });
+
+        // Verificar localStorage ao carregar
+        if (localStorage.getItem('isAdmin') === 'true') {
+            const adminLinks = document.querySelectorAll('#adminLink');
+            adminLinks.forEach(link => {
+                if (link) {
+                    link.style.display = 'inline-block';
+                }
+            });
+        }
+
+        // Atualizar contagem do carrinho a cada 500ms
+        setInterval(updateCartCount, 500);
+    </script>
+</body>
+</html>

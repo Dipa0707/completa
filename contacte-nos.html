@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contate-nos - DanielFish</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+</head>
+<body>
+    <!-- Include Navigation -->
+    <iframe src="nav.html" frameborder="0" width="100%" onload="this.before((this.contentDocument.body||this.contentDocument).children[0]);this.remove()"></iframe>
+
+    <main>
+        <h1>Entre em contacto connosco</h1>
+        <form id="contactForm" onsubmit="sendMessage(event)">
+            <input type="text" id="name" placeholder="Nome" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <textarea id="message" placeholder="Mensagem" required></textarea>
+            <button type="submit">Enviar</button>
+        </form>
+    </main>
+
+    <script>
+        const firebaseConfig = {
+    apiKey: "AIzaSyDdPF1KwTeC5zzFbsLnkCvx6a2BmWt8iL8",
+    authDomain: "test-58408.firebaseapp.com",
+    projectId: "test-58408",
+    storageBucket: "test-58408.appspot.com",
+    messagingSenderId: "857029748739",
+    appId: "1:857029748739:web:5a85299a0343e54a118636",
+    measurementId: "G-M4YV7HB77W"
+};
+        // Inicializar Firebase e Firestore
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            db = firebase.firestore();
+            console.log("Firebase e Firestore inicializados com sucesso");
+        } catch (error) {
+            console.error('Erro ao inicializar Firebase:', error);
+        }
+
+        async function sendMessage(event) {
+            event.preventDefault();
+            
+            try {
+                // Verificar se o Firestore está inicializado, caso não esteja não vai abrir
+                if (!db) {
+                    throw new Error('Firestore não está inicializado. Por favor, recarregue a página.');
+                }
+
+                const name = document.getElementById('name').value;
+                const email = document.getElementById('email').value;
+                const message = document.getElementById('message').value;
+
+                console.log("Tentando enviar mensagem...");
+                
+                const docRef = await db.collection('messages').add({
+                    name: name,
+                    email: email,
+                    message: message,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                console.log("Mensagem enviada com sucesso. ID:", docRef.id);
+                alert('Mensagem enviada com sucesso!');
+                document.getElementById('contactForm').reset();
+            } catch (error) {
+                console.error("Erro detalhado ao enviar mensagem:", error);
+                alert(`Erro ao enviar mensagem: ${error.message}`);
+            }
+        }
+    </script>
+
+    <style>
+        main {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a3549;
+            margin-bottom: 30px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        input, textarea {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        button {
+            background-color: #2196F3;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #1976D2;
+        }
+    </style>
+</body>
+</html>
